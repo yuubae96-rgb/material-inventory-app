@@ -7,13 +7,13 @@
 <title>材料・在庫管理</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/style.css">
 <style>
-.material-wrap{max-width:920px;margin:0 auto;padding:18px 14px 90px}.material-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.material-head h1{font-size:22px;margin:0}.material-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.material-actions{display:flex;gap:8px;flex-wrap:wrap}.material-list-item{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.09)}.material-top{display:flex;justify-content:space-between;gap:10px}.material-name{font-weight:900;font-size:16px}.material-meta{font-size:12px;opacity:.7;line-height:1.6;margin-top:4px}.material-stock{font-weight:900;font-size:19px;white-space:nowrap}.material-alert{color:#ff8b8b}.material-price{font-weight:800;margin-top:5px}.material-note{font-size:12px;opacity:.7}.material-tabs{display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:12px}.material-tab{white-space:nowrap;border:1px solid rgba(255,255,255,.14);background:#262b31;color:#fff;border-radius:999px;padding:9px 13px;font-weight:700}.material-tab.active{background:#fff;color:#16191d}.material-tab.material-register{background:#22a559;color:#fff;border-color:#22a559}.material-tab.material-register.active{background:#168447;color:#fff;border-color:#168447}.mini-badge{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:3px 7px;background:#383f47}.mini-badge.alert{background:#6b2525;color:#ffd4d4}.history-row{display:grid;grid-template-columns:90px 65px 1fr auto;gap:8px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px}.summary-materials{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.summary-materials .card{padding:14px}.summary-materials .n{font-size:24px;font-weight:900}.summary-materials .l{font-size:11px;opacity:.65}.auth-inline{padding:24px;text-align:center}.backlink{color:#1d4ed8;text-decoration:none;font-weight:700}.auto-note{font-size:12px;opacity:.7;margin-top:-5px}.optional-custom{display:none}.optional-custom.show{display:block}.section-title{font-weight:800;margin:18px 0 8px}.field select{font-size:16px}
+.material-wrap{max-width:920px;margin:0 auto;padding:18px 14px 90px}.material-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.material-head h1{font-size:22px;margin:0}.material-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.material-actions{display:flex;gap:8px;flex-wrap:wrap}.material-list-item{padding:14px 0;border-bottom:1px solid rgba(0,0,0,.09)}.material-top{display:flex;justify-content:space-between;gap:10px}.material-name{font-weight:900;font-size:16px}.material-meta{font-size:12px;opacity:.7;line-height:1.6;margin-top:4px}.material-stock{font-weight:900;font-size:19px;white-space:nowrap}.material-alert{color:#c62828}.material-price{font-weight:800;margin-top:5px}.material-note{font-size:12px;opacity:.7}.material-tabs{display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:12px}.material-tab{white-space:nowrap;border:1px solid #d1d5db;background:#262b31;color:#fff;border-radius:999px;padding:9px 13px;font-weight:700}.material-tab.active{background:#fff;color:#16191d}.material-tab.material-register{background:#22a559;color:#fff;border-color:#22a559}.material-tab.material-register.active{background:#168447;color:#fff;border-color:#168447}.mini-badge{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:3px 7px;background:#383f47;color:#fff}.mini-badge.alert{background:#6b2525;color:#ffd4d4}.history-row{display:grid;grid-template-columns:90px 65px 1fr auto;gap:8px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.08);font-size:13px}.summary-materials{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.summary-materials .card{padding:14px}.summary-materials .n{font-size:24px;font-weight:900}.summary-materials .l{font-size:11px;opacity:.65}.auth-inline{padding:24px;text-align:center}.backlink{color:#2563eb;text-decoration:none;font-weight:700}.auto-note{font-size:12px;opacity:.7;margin-top:-5px}.optional-custom{display:none}.optional-custom.show{display:block}.section-title{font-weight:800;margin:18px 0 8px}.field select{font-size:16px}
 @media(max-width:700px){.material-grid{grid-template-columns:1fr}.summary-materials{grid-template-columns:1fr 1fr}.summary-materials .card:last-child{grid-column:1/-1}.history-row{grid-template-columns:78px 55px 1fr}.history-row .hr-qty{grid-column:3}}
 </style>
 </head>
 <body>
 <div class="material-wrap">
-  <div class="material-head"><div><h1>材料・在庫管理</h1><div class="card-sub">見積原価と共通の材料マスター</div></div><a class="backlink" href="https://yuubae96-rgb.github.io/order-search-app/factory.html">← 工場アプリ</a></div>
+  <div class="material-head"><div><h1>材料・在庫管理</h1><div class="card-sub">材料マスター・在庫・納品書AI取込</div></div><a class="backlink" href="https://yuubae96-rgb.github.io/order-search-app/factory.html">← 工場アプリ</a></div>
   <div id="materialAuth" class="card auth-inline" style="display:none"></div>
   <div id="materialApp">
     <div class="summary-materials"><div class="card"><div class="l">登録材料</div><div class="n" id="mSumCount">0</div></div><div class="card"><div class="l">発注アラート</div><div class="n" id="mSumAlert">0</div></div><div class="card"><div class="l">概算在庫金額</div><div class="n" id="mSumValue">0円</div></div></div>
@@ -25,8 +25,16 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js?v=20260820-1925"></script>
-<script src="materials.js?v=20260820-1925"></script>
-<script src="materials-patch.js?v=20260820-1925"></script>
-<script src="delivery-import.js?v=20260820-1925"></script>
+<script>
+const SUPABASE_URL='https://vnnvuxccazkdzwqjmntz.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_xG-tuBgxFGntT1vlbZzuVQ_AZ2Zl8QL';
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+window.supabaseClient=supabaseClient;
+supabaseClient.auth.getSession=async()=>({data:{session:{user:{email:'factory@local'}}},error:null});
+supabaseClient.auth.getUser=async()=>({data:{user:{email:'factory@local'}},error:null});
+</script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@28d162512db535b5cfe06d671f15880b42d05e01/materials.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-confirm.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-patch.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/delivery-import.js"></script>
 </body></html>

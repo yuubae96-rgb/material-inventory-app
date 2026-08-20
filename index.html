@@ -37,4 +37,32 @@ supabaseClient.auth.getUser=async()=>({data:{user:{email:'factory@local'}},error
 <script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-confirm.js?v=20260820-1940"></script>
 <script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-patch.js?v=20260820-1940"></script>
 <script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/delivery-import.js?v=20260820-1940"></script>
+<script>
+(function(){
+  function fixLabelUnits(){
+    document.querySelectorAll('#mList .material-list-item').forEach(function(row){
+      var name=(row.querySelector('.material-name')?.textContent||'').trim();
+      if(!name.startsWith('シール ')) return;
+      var stock=row.querySelector('.material-stock');
+      var price=row.querySelector('.material-price');
+      var meta=row.querySelector('.material-meta');
+      var source=((meta?.textContent||'')+' '+(price?.textContent||''));
+      var hasSize=/\b\d+(?:\.\d+)?\s*[x×X]\s*\d+(?:\.\d+)?\b/.test(source);
+      if(stock) stock.textContent=stock.textContent.replace(/\s*枚\s*$/,' 単位不明');
+      if(price) price.textContent=price.textContent.replace(/\/\s*枚(?=\s|$)/,'/ 単位不明');
+      if(meta && !meta.querySelector('.unit-unknown-note')){
+        var n=document.createElement('div');
+        n.className='unit-unknown-note';
+        n.style.cssText='margin-top:4px;font-weight:800;color:#9a6700;opacity:1';
+        n.textContent=hasSize?'単位未確定（面積単価の可能性あり）':'単位未確定';
+        meta.appendChild(n);
+      }
+    });
+  }
+  function run(){fixLabelUnits();setTimeout(fixLabelUnits,300);setTimeout(fixLabelUnits,1000);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  var target=document.getElementById('mList');
+  if(target) new MutationObserver(function(){setTimeout(fixLabelUnits,0)}).observe(target,{childList:true,subtree:true});
+})();
+</script>
 </body></html>

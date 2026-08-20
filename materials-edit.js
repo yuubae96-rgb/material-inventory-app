@@ -109,6 +109,12 @@
     const s=document.createElement('script');s.id='stocktakeModule';s.src='./stocktake.js?v=20260820-2118';document.body.appendChild(s);
   }
 
+  function ensureSquareMeterUnit(){
+    const select=document.getElementById('mm_stock_unit');
+    if(!select)return;
+    if(![...select.options].some(o=>o.value==='㎡')) select.add(new Option('㎡（平方メートル）','㎡'));
+  }
+
   async function init(){
     ensureStyles();
     hookTabRefresh();setTimeout(hookTabRefresh,250);setTimeout(hookTabRefresh,800);setTimeout(hookTabRefresh,1600);
@@ -117,6 +123,9 @@
     const search=document.getElementById('mSearch');if(search)search.addEventListener('input',()=>setTimeout(attachButtons,30));
     setTimeout(loadStocktake,100);
     setTimeout(hookTabRefresh,1000);
+    ensureSquareMeterUnit();
+    const stockUnit=document.getElementById('mm_stock_unit');if(stockUnit)new MutationObserver(()=>ensureSquareMeterUnit()).observe(stockUnit,{childList:true});
+    ['mm_category','mm_material'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>setTimeout(ensureSquareMeterUnit,0)));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

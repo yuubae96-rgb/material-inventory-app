@@ -44,9 +44,7 @@ supabaseClient.auth.getUser=async()=>({data:{user:{email:'factory@local'}},error
     var sm=meta.match(/(\d+(?:\.\d+)?)\s*[x×X]\s*(\d+(?:\.\d+)?)/);
     var pm=String(originalPriceText||'').replace(/,/g,'').match(/最新単価\s*(\d+(?:\.\d+)?)円/);
     if(!sm) return null;
-    var w=Number(sm[1]),h=Number(sm[2]);
-    var mm2=w*h;
-    return {w:w,h:h,mm2:mm2,price:pm?Number(pm[1]):null};
+    return {widthMm:Number(sm[1]),lengthM:Number(sm[2]),price:pm?Number(pm[1]):null};
   }
   function fixLabelUnits(){
     document.querySelectorAll('#mList .material-list-item').forEach(function(row){
@@ -57,17 +55,17 @@ supabaseClient.auth.getUser=async()=>({data:{user:{email:'factory@local'}},error
       var meta=row.querySelector('.material-meta');
       var originalPriceText=price?.textContent||'';
       var info=labelInfo(row,originalPriceText);
-      if(stock) stock.textContent=stock.textContent.replace(/\s*枚\s*$/,' 単位不明');
-      if(price) price.textContent=price.textContent.replace(/\/\s*枚(?=\s|$)/,'/ 単位不明');
+      if(stock) stock.textContent=stock.textContent.replace(/\s*(枚|単位不明)\s*$/,' ㎡');
+      if(price) price.textContent=price.textContent.replace(/\/\s*(枚|単位不明)(?=\s|$)/,'/ ㎡');
       if(meta){
         var oldSize=meta.querySelector('.label-size-note');
         if(info){
           if(!oldSize){oldSize=document.createElement('div');oldSize.className='label-size-note';oldSize.style.cssText='margin-top:4px;font-weight:800;opacity:1';meta.appendChild(oldSize);}
-          oldSize.textContent='寸法 '+info.w+'mm × '+info.h+'mm ／ 面積 '+info.mm2.toLocaleString('ja-JP')+'mm²';
+          oldSize.textContent='幅 '+info.widthMm+'mm × 長さ '+info.lengthM+'m';
         }
         var n=meta.querySelector('.unit-unknown-note');
-        if(!n){n=document.createElement('div');n.className='unit-unknown-note';n.style.cssText='margin-top:4px;font-weight:800;color:#9a6700;opacity:1';meta.appendChild(n);}
-        n.textContent='納品書の単価単位は未確定';
+        if(!n){n=document.createElement('div');n.className='unit-unknown-note';n.style.cssText='margin-top:4px;font-weight:800;color:#287a3d;opacity:1';meta.appendChild(n);}
+        n.textContent='数量・単価基準：㎡（平方メートル）';
       }
       var old=row.querySelector('.area-price-note');
       if(old) old.remove();

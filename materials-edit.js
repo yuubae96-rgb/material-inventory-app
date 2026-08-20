@@ -78,29 +78,38 @@
     const m=findMaterial(editingId);if(!m)return;const {data,error}=await supabaseClient.from('inventory_movements').select('id').eq('material_id',editingId).limit(1);if(error){console.error(error);alert('履歴確認に失敗しました');return}if(data?.length){alert('この材料には入出庫履歴があります。削除せず「編集」で訂正してください。');return}if(!confirm('「'+m.name+'」を削除しますか？\n履歴のない誤登録だけ削除できます。'))return;const {error:de}=await supabaseClient.from('materials').update({active:false}).eq('id',editingId);if(de){console.error(de);alert('削除に失敗しました');return}alert('材料を削除しました');location.reload();
   }
 
+  function forceShowTab(btn){
+    const tab=btn.dataset.tab;
+    if(!tab||tab==='delivery')return;
+    document.querySelectorAll('.material-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.material-panel').forEach(x=>{x.classList.remove('active');x.style.display='none'});
+    btn.classList.add('active');
+    const panel=document.getElementById('mp-'+tab);
+    if(panel){panel.classList.add('active');panel.style.display='block'}
+  }
+
   function hookTabRefresh(){
     document.querySelectorAll('.material-tab').forEach(btn=>{
-      if(btn.dataset.refreshHook)return;btn.dataset.refreshHook='1';
+      if(btn.dataset.refreshHook)return;
+      btn.dataset.refreshHook='1';
       btn.addEventListener('click',async()=>{
+        if(btn.dataset.tab!=='delivery')forceShowTab(btn);
         try{
-          const tab=btn.dataset.tab;
-          if(tab!=='delivery'){
-            document.querySelectorAll('.material-panel').forEach(p=>{if(p.id!=='mp-delivery')p.style.display='none'});
-            const target=document.getElementById('mp-'+tab);
-            if(target)target.style.display='block';
-          }
           if(typeof loadAll==='function')await loadAll();
-          await fetchMaterials();setTimeout(attachButtons,50);
+          await fetchMaterials();
+          if(btn.dataset.tab!=='delivery')forceShowTab(btn);
+          setTimeout(attachButtons,50);
         }catch(e){console.error('tab refresh',e)}
-      });
+      },true);
     });
   }
 
   async function init(){
-    ensureStyles();hookTabRefresh();await fetchMaterials();for(let i=0;i<12;i++)setTimeout(attachButtons,i*350);
+    ensureStyles();
+    hookTabRefresh();setTimeout(hookTabRefresh,250);setTimeout(hookTabRefresh,800);setTimeout(hookTabRefresh,1600);
+    await fetchMaterials();for(let i=0;i<12;i++)setTimeout(attachButtons,i*350);
     const list=document.getElementById('mList');if(list)new MutationObserver(()=>setTimeout(attachButtons,30)).observe(list,{childList:true,subtree:true});
     const search=document.getElementById('mSearch');if(search)search.addEventListener('input',()=>setTimeout(attachButtons,30));
-    setTimeout(hookTabRefresh,700);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

@@ -93,15 +93,20 @@
       if(btn.dataset.refreshHook)return;
       btn.dataset.refreshHook='1';
       btn.addEventListener('click',async()=>{
-        if(btn.dataset.tab!=='delivery')forceShowTab(btn);
+        if(btn.dataset.tab!=='delivery'&&btn.dataset.tab!=='stocktake')forceShowTab(btn);
         try{
           if(typeof loadAll==='function')await loadAll();
           await fetchMaterials();
-          if(btn.dataset.tab!=='delivery')forceShowTab(btn);
+          if(btn.dataset.tab!=='delivery'&&btn.dataset.tab!=='stocktake')forceShowTab(btn);
           setTimeout(attachButtons,50);
         }catch(e){console.error('tab refresh',e)}
       },true);
     });
+  }
+
+  function loadStocktake(){
+    if(document.getElementById('stocktakeModule'))return;
+    const s=document.createElement('script');s.id='stocktakeModule';s.src='./stocktake.js?v=20260820-2118';document.body.appendChild(s);
   }
 
   async function init(){
@@ -110,6 +115,8 @@
     await fetchMaterials();for(let i=0;i<12;i++)setTimeout(attachButtons,i*350);
     const list=document.getElementById('mList');if(list)new MutationObserver(()=>setTimeout(attachButtons,30)).observe(list,{childList:true,subtree:true});
     const search=document.getElementById('mSearch');if(search)search.addEventListener('input',()=>setTimeout(attachButtons,30));
+    setTimeout(loadStocktake,100);
+    setTimeout(hookTabRefresh,1000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

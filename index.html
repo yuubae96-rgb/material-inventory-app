@@ -34,11 +34,21 @@ supabaseClient.auth.getSession=async()=>({data:{session:{user:{email:'factory@lo
 supabaseClient.auth.getUser=async()=>({data:{user:{email:'factory@local'}},error:null});
 </script>
 <script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@28d162512db535b5cfe06d671f15880b42d05e01/materials.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-confirm.js?v=20260820-1940"></script>
-<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-patch.js?v=20260820-1940"></script>
-<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/delivery-import.js?v=20260820-1940"></script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/materials-confirm.js?v=20260820-2005"></script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@504ef369c6ed2b751b0315c192200f73f4d6f6e1/materials-patch.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/yuubae96-rgb/order-search-app@main/delivery-import.js?v=20260820-2005"></script>
 <script>
 (function(){
+  function areaPriceFrom(row, originalPriceText){
+    var meta=(row.querySelector('.material-meta')?.textContent||'');
+    var sm=meta.match(/(\d+(?:\.\d+)?)\s*[x×X]\s*(\d+(?:\.\d+)?)/);
+    var pm=String(originalPriceText||'').replace(/,/g,'').match(/最新単価\s*(\d+(?:\.\d+)?)円/);
+    if(!sm||!pm) return null;
+    var w=Number(sm[1]), h=Number(sm[2]), p=Number(pm[1]);
+    var sqm=(w/1000)*(h/1000);
+    if(!(w>0&&h>0&&p>0&&sqm>0)) return null;
+    return Math.round(p/sqm);
+  }
   function fixLabelUnits(){
     document.querySelectorAll('#mList .material-list-item').forEach(function(row){
       var name=(row.querySelector('.material-name')?.textContent||'').trim();
@@ -46,17 +56,20 @@ supabaseClient.auth.getUser=async()=>({data:{user:{email:'factory@local'}},error
       var stock=row.querySelector('.material-stock');
       var price=row.querySelector('.material-price');
       var meta=row.querySelector('.material-meta');
-      var source=((meta?.textContent||'')+' '+(price?.textContent||''));
-      var hasSize=/\b\d+(?:\.\d+)?\s*[x×X]\s*\d+(?:\.\d+)?\b/.test(source);
+      var originalPriceText=price?.textContent||'';
+      var areaPrice=areaPriceFrom(row,originalPriceText);
       if(stock) stock.textContent=stock.textContent.replace(/\s*枚\s*$/,' 単位不明');
       if(price) price.textContent=price.textContent.replace(/\/\s*枚(?=\s|$)/,'/ 単位不明');
-      if(meta && !meta.querySelector('.unit-unknown-note')){
-        var n=document.createElement('div');
-        n.className='unit-unknown-note';
-        n.style.cssText='margin-top:4px;font-weight:800;color:#9a6700;opacity:1';
-        n.textContent=hasSize?'単位未確定（面積単価の可能性あり）':'単位未確定';
-        meta.appendChild(n);
+      if(meta){
+        var n=meta.querySelector('.unit-unknown-note');
+        if(!n){n=document.createElement('div');n.className='unit-unknown-note';n.style.cssText='margin-top:4px;font-weight:800;color:#9a6700;opacity:1';meta.appendChild(n);}
+        n.textContent=areaPrice?'単位未確定（面積換算あり）':'単位未確定';
       }
+      var old=row.querySelector('.area-price-note');
+      if(areaPrice){
+        if(!old){old=document.createElement('div');old.className='area-price-note';old.style.cssText='margin-top:4px;font-weight:900;color:#0f766e';price?.after(old);}
+        old.textContent='参考面積単価 約'+areaPrice.toLocaleString('ja-JP')+'円/㎡';
+      }else if(old){old.remove();}
     });
   }
   function run(){fixLabelUnits();setTimeout(fixLabelUnits,300);setTimeout(fixLabelUnits,1000);}

@@ -43,7 +43,7 @@
  function loadStocktake(){if(document.getElementById('stocktakeModule'))return;const s=document.createElement('script');s.id='stocktakeModule';s.src='./stocktake.js?v=20260820-2118';document.body.appendChild(s)}
  function loadExtraModules(){
   if(!document.querySelector('script[data-local-dup-review]')){const s=document.createElement('script');s.dataset.localDupReview='1';s.src='./material-duplicate-review.js?v=20260821-1924';document.body.appendChild(s)}
-  if(!document.querySelector('script[data-delivery-archive]')){const s=document.createElement('script');s.dataset.deliveryArchive='1';s.src='./delivery-archive.js?v=20260821-1924';document.body.appendChild(s)}
+  if(!document.querySelector('script[data-delivery-archive]')){const s=document.createElement('script');s.dataset.deliveryArchive='1';s.src='./delivery-archive.js?v=20260821-1940';document.body.appendChild(s)}
  }
  function replaceListToDropLegacyObservers(){
   const old=document.getElementById('mList');if(!old||old.dataset.observerReset==='1')return old;

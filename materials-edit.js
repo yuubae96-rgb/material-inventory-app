@@ -41,18 +41,22 @@
  function hookTabs(){document.querySelectorAll('.material-tab').forEach(btn=>{if(btn.dataset.fastUi==='1')return;btn.dataset.fastUi='1';btn.style.touchAction='manipulation';btn.addEventListener('pointerdown',()=>showTab(btn),{passive:true});btn.addEventListener('click',()=>showTab(btn),true)})}
  function ensureSquareMeterUnit(){const select=document.getElementById('mm_stock_unit');if(select&&![...select.options].some(o=>o.value==='㎡'))select.add(new Option('㎡（平方メートル）','㎡'))}
  function loadStocktake(){if(document.getElementById('stocktakeModule'))return;const s=document.createElement('script');s.id='stocktakeModule';s.src='./stocktake.js?v=20260820-2118';document.body.appendChild(s)}
+ function loadExtraModules(){
+  if(!document.querySelector('script[data-local-dup-review]')){const s=document.createElement('script');s.dataset.localDupReview='1';s.src='./material-duplicate-review.js?v=20260821-1924';document.body.appendChild(s)}
+  if(!document.querySelector('script[data-delivery-archive]')){const s=document.createElement('script');s.dataset.deliveryArchive='1';s.src='./delivery-archive.js?v=20260821-1924';document.body.appendChild(s)}
+ }
  function replaceListToDropLegacyObservers(){
   const old=document.getElementById('mList');if(!old||old.dataset.observerReset==='1')return old;
   const fresh=old.cloneNode(true);fresh.dataset.observerReset='1';old.replaceWith(fresh);return fresh;
  }
  async function init(){
   ensureStyles();hookTabs();ensureSquareMeterUnit();if(!location.hash)requestAnimationFrame(()=>window.scrollTo(0,0));
-  // 過去の表示補正スクリプトがmListに付けた重いMutationObserverをここで完全に切り離す。
   const list=replaceListToDropLegacyObservers();
   await fetchMaterials();scheduleAttach();
   if(list){new MutationObserver(scheduleAttach).observe(list,{childList:true});list.addEventListener('click',e=>{const btn=e.target.closest?.('.material-edit-btn');if(!btn)return;e.preventDefault();e.stopPropagation();const row=btn.closest('.material-list-item');if(row)openEditor(row,btn.dataset.id)},true)}
   document.getElementById('mSearch')?.addEventListener('input',scheduleAttach,{passive:true});
-  setTimeout(loadStocktake,700);setTimeout(hookTabs,900);
+  loadExtraModules();
+  setTimeout(loadStocktake,700);setTimeout(hookTabs,900);setTimeout(loadExtraModules,1200);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

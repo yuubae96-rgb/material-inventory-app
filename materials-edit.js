@@ -2,7 +2,7 @@
 (function(){
   let activeMaterials=[];
   let editingId=null;
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const today=()=>{const d=new Date(),z=d.getTimezoneOffset();return new Date(d.getTime()-z*60000).toISOString().slice(0,10)};
 
   function ensureStyles(){
@@ -19,6 +19,7 @@
       .material-edit-save{background:#168447;color:#fff;border:0;border-radius:9px;padding:10px 15px;font-weight:900}
       .material-edit-cancel{background:#fff;border:1px solid #cbd5e1;border-radius:9px;padding:10px 15px;font-weight:800}
       .material-edit-delete{background:#fff;color:#b42318;border:1px solid #efb4ae;border-radius:9px;padding:10px 15px;font-weight:800;margin-left:auto}
+      .delivery-bulk-fixed-status{margin-top:8px;font-size:13px;font-weight:800;color:#14532d;line-height:1.6}
       @media(max-width:700px){.material-edit-grid{grid-template-columns:1fr}.material-edit-delete{margin-left:0}}
     `;
     document.head.appendChild(s);
@@ -115,6 +116,55 @@
     if(![...select.options].some(o=>o.value==='㎡')) select.add(new Option('㎡（平方メートル）','㎡'));
   }
 
+  function patchDeliveryBulk(){
+    const box=document.getElementById('deliveryBulk');
+    const results=document.getElementById('deliveryResults');
+    if(!box||!results)return;
+    const button=box.querySelector('button');
+    if(!button||button.dataset.bulkFixed==='1')return;
+    const cards=[...results.querySelectorAll('.delivery-result')].filter(c=>c.dataset.safe==='1'&&!c.classList.contains('delivery-done'));
+    if(!cards.length)return;
+    button.dataset.bulkFixed='1';
+    button.textContent=`安全な${cards.length}件を一括登録`;
+    button.disabled=false;
+    button.onclick=async e=>{
+      e.preventDefault();e.stopPropagation();
+      const targets=[...results.querySelectorAll('.delivery-result')].filter(c=>c.dataset.safe==='1'&&!c.classList.contains('delivery-done'));
+      if(!targets.length){button.textContent='✓ 登録済みです';return}
+      button.disabled=true;
+      let ok=0,fail=0;
+      let status=box.querySelector('.delivery-bulk-fixed-status');
+      if(!status){status=document.createElement('div');status.className='delivery-bulk-fixed-status';box.appendChild(status)}
+      for(let i=0;i<targets.length;i++){
+        button.textContent=`登録中 ${i+1}/${targets.length}…`;
+        status.textContent=`${i+1}/${targets.length}件目を登録しています`;
+        const c=targets[i];
+        const cb=c.querySelector('.delivery-confirm');
+        if(!cb){fail++;continue}
+        cb.click();
+        const started=Date.now();
+        while(Date.now()-started<30000){
+          if(c.classList.contains('delivery-done'))break;
+          const msg=c.querySelector('.msg')?.textContent||'';
+          if(msg.includes('エラー'))break;
+          await new Promise(r=>setTimeout(r,150));
+        }
+        if(c.classList.contains('delivery-done'))ok++;else fail++;
+      }
+      button.disabled=false;
+      button.textContent=fail?`未登録${fail}件をもう一度登録`:`✓ ${ok}件を一括登録しました`;
+      status.textContent=`登録結果：✓ ${ok}件成功${fail?`　⚠ ${fail}件未登録`:''}`;
+      setTimeout(()=>{if(typeof loadAll==='function')loadAll().catch(()=>{})},300);
+    };
+  }
+
+  function watchDeliveryBulk(){
+    const root=document.getElementById('materialApp')||document.body;
+    const run=()=>setTimeout(patchDeliveryBulk,20);
+    run();
+    new MutationObserver(run).observe(root,{childList:true,subtree:true,characterData:true});
+  }
+
   async function init(){
     ensureStyles();
     hookTabRefresh();setTimeout(hookTabRefresh,250);setTimeout(hookTabRefresh,800);setTimeout(hookTabRefresh,1600);
@@ -126,6 +176,7 @@
     ensureSquareMeterUnit();
     const stockUnit=document.getElementById('mm_stock_unit');if(stockUnit)new MutationObserver(()=>ensureSquareMeterUnit()).observe(stockUnit,{childList:true});
     ['mm_category','mm_material'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>setTimeout(ensureSquareMeterUnit,0)));
+    watchDeliveryBulk();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

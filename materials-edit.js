@@ -2,7 +2,7 @@
 (function(){
   let activeMaterials=[];
   let editingId=null;
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const today=()=>{const d=new Date(),z=d.getTimezoneOffset();return new Date(d.getTime()-z*60000).toISOString().slice(0,10)};
 
   function ensureStyles(){
@@ -10,7 +10,8 @@
     const s=document.createElement('style');
     s.id='materialEditStyles';
     s.textContent=`
-      .material-edit-btn{display:inline-flex!important;align-items:center;justify-content:center;margin-top:10px;border:2px solid #2563eb!important;background:#fff!important;color:#1d4ed8!important;border-radius:10px;padding:7px 16px;font-weight:900;font-size:14px;min-width:72px}
+      .material-edit-btn{display:inline-flex!important;align-items:center;justify-content:center;margin-top:10px;border:2px solid #2563eb!important;background:#fff!important;color:#1d4ed8!important;border-radius:10px;padding:7px 16px;font-weight:900;font-size:14px;min-width:72px;touch-action:manipulation}
+      .material-edit-btn:active{transform:scale(.98)}
       .material-edit-box{margin-top:10px;padding:13px;border:2px solid #93c5fd;border-radius:12px;background:#f8fbff}
       .material-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
       .material-edit-box label{display:block;font-size:11px;font-weight:800;margin-bottom:4px;color:#4b5563}
@@ -49,7 +50,8 @@
       const m=shown[i];
       if(!m)return;
       if(!btn){btn=document.createElement('button');btn.type='button';btn.className='material-edit-btn';btn.textContent='編集';row.appendChild(btn)}
-      btn.dataset.id=m.id;btn.onclick=()=>openEditor(row,m.id);
+      btn.dataset.id=m.id;
+      btn.onclick=e=>{e.preventDefault();e.stopPropagation();openEditor(row,m.id)};
     });
   }
 
@@ -60,11 +62,22 @@
   }
   function findMaterial(id){return activeMaterials.find(m=>String(m.id)===String(id))||null}
 
-  async function openEditor(row,id){
+  function openEditor(row,id){
     document.querySelectorAll('.material-edit-box').forEach(x=>x.remove());editingId=id;
-    const m=findMaterial(id);if(!m)return;const p=await latestPrice(id);const box=document.createElement('div');box.className='material-edit-box';
-    box.innerHTML=`<div style="font-weight:900;font-size:17px;margin-bottom:10px">材料マスターを編集</div><div class="material-edit-grid"><div><label>材料名</label><input id="me_name" value="${esc(m.name)}"></div><div><label>規格</label><input id="me_spec" value="${esc(m.spec||'')}"></div><div><label>厚み mm</label><input id="me_thickness" type="number" step="any" value="${esc(m.thickness_mm??'')}"></div><div><label>購入サイズ・形態</label><input id="me_purchase" value="${esc(m.purchase_form||'')}"></div><div><label>仕入先</label><input id="me_supplier" value="${esc(m.supplier||'')}"></div><div><label>発注点</label><input id="me_reorder" type="number" step="any" value="${esc(m.reorder_point??0)}"></div><div><label>保管場所</label><input id="me_location" value="${esc(m.storage_location||'')}"></div><div><label>最新単価</label><input id="me_price" type="number" step="any" value="${esc(p?.price??'')}"></div><div><label>単価適用日</label><input id="me_price_date" type="date" value="${esc(p?.effective_from||today())}"></div></div><div style="margin-top:9px"><label>備考</label><textarea id="me_notes">${esc(m.notes||'')}</textarea></div><div class="material-edit-actions"><button type="button" class="material-edit-save">保存</button><button type="button" class="material-edit-cancel">キャンセル</button><button type="button" class="material-edit-delete">削除</button></div>`;
-    row.appendChild(box);box.querySelector('.material-edit-save').onclick=saveEdit;box.querySelector('.material-edit-cancel').onclick=()=>{box.remove();editingId=null};box.querySelector('.material-edit-delete').onclick=deleteMaterial;box.scrollIntoView({behavior:'smooth',block:'center'});
+    const m=findMaterial(id);if(!m)return;
+    const box=document.createElement('div');box.className='material-edit-box';
+    box.innerHTML=`<div style="font-weight:900;font-size:17px;margin-bottom:10px">材料マスターを編集</div><div class="material-edit-grid"><div><label>材料名</label><input id="me_name" value="${esc(m.name)}"></div><div><label>規格</label><input id="me_spec" value="${esc(m.spec||'')}"></div><div><label>厚み mm</label><input id="me_thickness" type="number" step="any" value="${esc(m.thickness_mm??'')}"></div><div><label>購入サイズ・形態</label><input id="me_purchase" value="${esc(m.purchase_form||'')}"></div><div><label>仕入先</label><input id="me_supplier" value="${esc(m.supplier||'')}"></div><div><label>発注点</label><input id="me_reorder" type="number" step="any" value="${esc(m.reorder_point??0)}"></div><div><label>保管場所</label><input id="me_location" value="${esc(m.storage_location||'')}"></div><div><label>最新単価</label><input id="me_price" type="number" step="any" placeholder="読み込み中…"></div><div><label>単価適用日</label><input id="me_price_date" type="date" value="${today()}"></div></div><div style="margin-top:9px"><label>備考</label><textarea id="me_notes">${esc(m.notes||'')}</textarea></div><div class="material-edit-actions"><button type="button" class="material-edit-save">保存</button><button type="button" class="material-edit-cancel">キャンセル</button><button type="button" class="material-edit-delete">削除</button></div>`;
+    row.appendChild(box);
+    box.querySelector('.material-edit-save').onclick=saveEdit;
+    box.querySelector('.material-edit-cancel').onclick=()=>{box.remove();editingId=null};
+    box.querySelector('.material-edit-delete').onclick=deleteMaterial;
+    box.scrollIntoView({behavior:'auto',block:'center'});
+    latestPrice(id).then(p=>{
+      if(editingId!==id||!box.isConnected)return;
+      const pi=box.querySelector('#me_price'),di=box.querySelector('#me_price_date');
+      if(pi){pi.value=p?.price??'';pi.placeholder=''}
+      if(di)di.value=p?.effective_from||today();
+    }).catch(e=>console.error('price load',e));
   }
 
   async function saveEdit(){
@@ -93,14 +106,19 @@
     document.querySelectorAll('.material-tab').forEach(btn=>{
       if(btn.dataset.refreshHook)return;
       btn.dataset.refreshHook='1';
-      btn.addEventListener('click',async()=>{
+      btn.style.touchAction='manipulation';
+      btn.addEventListener('pointerdown',()=>{
         if(btn.dataset.tab!=='delivery'&&btn.dataset.tab!=='stocktake')forceShowTab(btn);
-        try{
-          if(typeof loadAll==='function')await loadAll();
-          await fetchMaterials();
-          if(btn.dataset.tab!=='delivery'&&btn.dataset.tab!=='stocktake')forceShowTab(btn);
-          setTimeout(attachButtons,50);
-        }catch(e){console.error('tab refresh',e)}
+      },{passive:true});
+      btn.addEventListener('click',()=>{
+        if(btn.dataset.tab!=='delivery'&&btn.dataset.tab!=='stocktake')forceShowTab(btn);
+        Promise.resolve().then(async()=>{
+          try{
+            if(typeof loadAll==='function')await loadAll();
+            await fetchMaterials();
+            setTimeout(attachButtons,0);
+          }catch(e){console.error('tab refresh',e)}
+        });
       },true);
     });
   }
@@ -168,11 +186,10 @@
   async function init(){
     ensureStyles();
     hookTabRefresh();setTimeout(hookTabRefresh,250);setTimeout(hookTabRefresh,800);setTimeout(hookTabRefresh,1600);
-    await fetchMaterials();for(let i=0;i<12;i++)setTimeout(attachButtons,i*350);
-    const list=document.getElementById('mList');if(list)new MutationObserver(()=>setTimeout(attachButtons,30)).observe(list,{childList:true,subtree:true});
-    const search=document.getElementById('mSearch');if(search)search.addEventListener('input',()=>setTimeout(attachButtons,30));
+    await fetchMaterials();for(let i=0;i<6;i++)setTimeout(attachButtons,i*180);
+    const list=document.getElementById('mList');if(list)new MutationObserver(()=>setTimeout(attachButtons,0)).observe(list,{childList:true,subtree:true});
+    const search=document.getElementById('mSearch');if(search)search.addEventListener('input',()=>setTimeout(attachButtons,0));
     setTimeout(loadStocktake,100);
-    setTimeout(hookTabRefresh,1000);
     ensureSquareMeterUnit();
     const stockUnit=document.getElementById('mm_stock_unit');if(stockUnit)new MutationObserver(()=>ensureSquareMeterUnit()).observe(stockUnit,{childList:true});
     ['mm_category','mm_material'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>setTimeout(ensureSquareMeterUnit,0)));

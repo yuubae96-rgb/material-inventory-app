@@ -24,49 +24,22 @@ function installLargeFileUploadFix(){
   return originalFetch(input,init);
  };
 }
-function getReviewItems(){
- const results=document.getElementById('deliveryResults');if(!results)return [];
- return [...results.querySelectorAll('.delivery-result')].filter(x=>x.dataset.safe!=='1'||x.classList.contains('uncertain')||x.querySelector('.delivery-warnings'));
-}
-function jumpToFirstReview(){
- const first=getReviewItems()[0];if(!first)return false;
- first.scrollIntoView({behavior:'smooth',block:'center'});
- first.style.outline='4px solid #f59e0b';first.style.outlineOffset='4px';
- setTimeout(()=>{first.style.outline='';first.style.outlineOffset=''},1800);
- return true;
-}
-function fixReviewSummary(){
- const uncertain=getReviewItems();
- document.querySelectorAll('#deliveryReviewSummary').forEach(review=>{
-  if(!uncertain.length){review.style.display='none';return}review.style.display='';
-  const btn=review.querySelector('#jumpReview')||[...review.querySelectorAll('button')].find(b=>(b.textContent||'').includes('最初の要確認'));
-  if(btn){btn.disabled=false;btn.style.pointerEvents='auto';btn.onclick=e=>{e.preventDefault();e.stopPropagation();jumpToFirstReview()}}
- });
-}
-function installReviewJumpDelegation(){
- if(window.__deliveryReviewJumpDelegated)return;window.__deliveryReviewJumpDelegated=true;
- document.addEventListener('click',e=>{
-  const btn=e.target.closest?.('button');if(!btn)return;
-  if((btn.textContent||'').includes('最初の要確認')){
-   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();jumpToFirstReview();
-  }
- },true);
-}
-function watchReviewSummary(){
- const results=document.getElementById('deliveryResults');if(!results){setTimeout(watchReviewSummary,250);return}if(results.dataset.reviewObserver==='1')return;results.dataset.reviewObserver='1';
- let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(fixReviewSummary,50)}).observe(results,{childList:true,attributes:true,attributeFilter:['class'],subtree:true});
-}
-async function loadSuppliers(){
- try{const {data,error}=await supabaseClient.from('materials').select('supplier').eq('active',true);if(error)throw error;const groups=new Map();for(const row of data||[]){const raw=displayName(row.supplier);if(!raw)continue;const key=norm(raw);if(!groups.has(key))groups.set(key,{key,label:raw,count:0});const g=groups.get(key);g.count++;if(raw.length<g.label.length)g.label=raw}suppliers=[...groups.values()].sort((a,b)=>a.label.localeCompare(b.label,'ja'));renderChoices()}catch(e){console.error('supplier filter load',e)}
-}
+function getReviewItems(){const results=document.getElementById('deliveryResults');if(!results)return [];return [...results.querySelectorAll('.delivery-result')].filter(x=>x.dataset.safe!=='1'||x.classList.contains('uncertain')||x.querySelector('.delivery-warnings'))}
+function jumpToFirstReview(){const first=getReviewItems()[0];if(!first)return false;first.scrollIntoView({behavior:'smooth',block:'center'});first.style.outline='4px solid #f59e0b';first.style.outlineOffset='4px';setTimeout(()=>{first.style.outline='';first.style.outlineOffset=''},1800);return true}
+function fixReviewSummary(){const uncertain=getReviewItems();document.querySelectorAll('#deliveryReviewSummary').forEach(review=>{if(!uncertain.length){review.style.display='none';return}review.style.display='';const btn=review.querySelector('#jumpReview')||[...review.querySelectorAll('button')].find(b=>(b.textContent||'').includes('最初の要確認'));if(btn){btn.disabled=false;btn.style.pointerEvents='auto';btn.onclick=e=>{e.preventDefault();e.stopPropagation();jumpToFirstReview()}}})}
+function installReviewJumpDelegation(){if(window.__deliveryReviewJumpDelegated)return;window.__deliveryReviewJumpDelegated=true;document.addEventListener('click',e=>{const btn=e.target.closest?.('button');if(!btn)return;if((btn.textContent||'').includes('最初の要確認')){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();jumpToFirstReview()}},true)}
+function watchReviewSummary(){const results=document.getElementById('deliveryResults');if(!results){setTimeout(watchReviewSummary,250);return}if(results.dataset.reviewObserver==='1')return;results.dataset.reviewObserver='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(fixReviewSummary,50)}).observe(results,{childList:true,attributes:true,attributeFilter:['class'],subtree:true})}
+async function loadSuppliers(){try{const {data,error}=await supabaseClient.from('materials').select('supplier').eq('active',true);if(error)throw error;const groups=new Map();for(const row of data||[]){const raw=displayName(row.supplier);if(!raw)continue;const key=norm(raw);if(!groups.has(key))groups.set(key,{key,label:raw,count:0});const g=groups.get(key);g.count++;if(raw.length<g.label.length)g.label=raw}suppliers=[...groups.values()].sort((a,b)=>a.label.localeCompare(b.label,'ja'));renderChoices()}catch(e){console.error('supplier filter load',e)}}
 function renderChoices(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const current=filter.value;filter.innerHTML='<option value="">すべてのサプライヤー</option>'+suppliers.map(x=>`<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');if(suppliers.some(x=>x.key===current))filter.value=current;const dl=document.getElementById('mSupplierList');if(dl)dl.innerHTML=suppliers.map(x=>`<option value="${esc(x.label)}"></option>`).join('')}
 function applyFilter(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const key=filter.value;document.querySelectorAll('#mList .material-list-item').forEach(row=>{if(!key){row.style.display='';return}const meta=norm(row.querySelector('.material-meta')?.innerText||'');row.style.display=meta.includes(key)?'':'none'})}
 async function refreshInventory(){if(refreshing)return;refreshing=true;try{if(typeof loadAll==='function')await loadAll();await loadSuppliers();requestAnimationFrame(applyFilter)}catch(e){console.error('inventory live refresh',e)}finally{refreshing=false}}
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(refreshInventory,120)}
 function watchDelivery(){const results=document.getElementById('deliveryResults');if(!results){setTimeout(watchDelivery,250);return}if(results.dataset.liveRefreshWatch)return;results.dataset.liveRefreshWatch='1';let doneCount=results.querySelectorAll('.delivery-result.delivery-done').length;new MutationObserver(()=>{const next=results.querySelectorAll('.delivery-result.delivery-done').length;if(next>doneCount)scheduleRefresh();doneCount=next}).observe(results,{subtree:true,childList:true,attributes:true,attributeFilter:['class']})}
-function loadNormalizer(){if(window.__deliveryNormalizerLoading)return;window.__deliveryNormalizerLoading=true;const s=document.createElement('script');s.src='./delivery-normalize.js?v=20260823-1';document.body.appendChild(s)}
+function loadScriptOnce(src,key){if(window[key])return;window[key]=true;const s=document.createElement('script');s.src=src;document.body.appendChild(s)}
 function hook(){
- installLargeFileUploadFix();installReviewJumpDelegation();watchReviewSummary();loadNormalizer();
+ installLargeFileUploadFix();installReviewJumpDelegation();watchReviewSummary();
+ loadScriptOnce('./delivery-normalize.js?v=20260823-2','__deliveryNormalizerLoading');
+ loadScriptOnce('./inventory-m2-display.js?v=20260823-1','__inventoryM2DisplayLoading');
  const filter=document.getElementById('mSupplierFilter');if(!filter){setTimeout(hook,200);return}
  if(!filter.dataset.directSupplierFix){filter.dataset.directSupplierFix='1';filter.addEventListener('change',applyFilter)}
  loadSuppliers();watchDelivery();

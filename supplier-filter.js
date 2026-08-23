@@ -3,6 +3,16 @@
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const norm=s=>String(s||'').normalize('NFKC').replace(/[\s　]+/g,'').toLowerCase();
 const displayName=s=>String(s||'').normalize('NFKC').replace(/[\s　]+/g,' ').trim();
+const supplierKey=s=>{
+ let t=String(s||'').normalize('NFKC').toLowerCase();
+ t=t.replace(/[（(]\s*(?:株|有)\s*[）)]/g,'');
+ t=t.replace(/株式会社|有限会社|合同会社|合資会社|合名会社/g,'');
+ t=t.replace(/[\s　・･.．,，、\-‐‑–—_]/g,'');
+ // 「株式会社 九州黄銅」「九州黄銅株式会社」「株式会社 九州黄銅社」のような
+ // 明らかな表記ゆれを同一サプライヤーとして扱う。
+ if(t.length>2)t=t.replace(/社$/,'');
+ return t;
+};
 let suppliers=[],refreshing=false,refreshTimer=null;
 function installLargeFileUploadFix(){
  if(window.__deliveryLargeUploadFixed)return;window.__deliveryLargeUploadFixed=true;
@@ -29,9 +39,24 @@ function jumpToFirstReview(){const first=getReviewItems()[0];if(!first)return fa
 function fixReviewSummary(){const uncertain=getReviewItems();document.querySelectorAll('#deliveryReviewSummary').forEach(review=>{if(!uncertain.length){review.style.display='none';return}review.style.display='';const btn=review.querySelector('#jumpReview')||[...review.querySelectorAll('button')].find(b=>(b.textContent||'').includes('最初の要確認'));if(btn){btn.disabled=false;btn.style.pointerEvents='auto';btn.onclick=e=>{e.preventDefault();e.stopPropagation();jumpToFirstReview()}}})}
 function installReviewJumpDelegation(){if(window.__deliveryReviewJumpDelegated)return;window.__deliveryReviewJumpDelegated=true;document.addEventListener('click',e=>{const btn=e.target.closest?.('button');if(!btn)return;if((btn.textContent||'').includes('最初の要確認')){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();jumpToFirstReview()}},true)}
 function watchReviewSummary(){const results=document.getElementById('deliveryResults');if(!results){setTimeout(watchReviewSummary,250);return}if(results.dataset.reviewObserver==='1')return;results.dataset.reviewObserver='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(fixReviewSummary,50)}).observe(results,{childList:true,attributes:true,attributeFilter:['class'],subtree:true})}
-async function loadSuppliers(){try{const {data,error}=await supabaseClient.from('materials').select('supplier').eq('active',true);if(error)throw error;const groups=new Map();for(const row of data||[]){const raw=displayName(row.supplier);if(!raw)continue;const key=norm(raw);if(!groups.has(key))groups.set(key,{key,label:raw,count:0});const g=groups.get(key);g.count++;if(raw.length<g.label.length)g.label=raw}suppliers=[...groups.values()].sort((a,b)=>a.label.localeCompare(b.label,'ja'));renderChoices()}catch(e){console.error('supplier filter load',e)}}
+async function loadSuppliers(){
+ try{
+  const {data,error}=await supabaseClient.from('materials').select('supplier').eq('active',true);if(error)throw error;
+  const groups=new Map();
+  for(const row of data||[]){
+   const raw=displayName(row.supplier);if(!raw)continue;
+   const key=supplierKey(raw)||norm(raw);if(!key)continue;
+   if(!groups.has(key))groups.set(key,{key,label:raw,count:0,aliases:new Set()});
+   const g=groups.get(key);g.count++;g.aliases.add(norm(raw));
+   // 同一会社なら、支店名などを勝手に消さず、そのグループ内で最も短い表記を代表名にする。
+   if(raw.length<g.label.length)g.label=raw;
+  }
+  suppliers=[...groups.values()].sort((a,b)=>a.label.localeCompare(b.label,'ja'));
+  renderChoices();
+ }catch(e){console.error('supplier filter load',e)}
+}
 function renderChoices(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const current=filter.value;filter.innerHTML='<option value="">すべてのサプライヤー</option>'+suppliers.map(x=>`<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');if(suppliers.some(x=>x.key===current))filter.value=current;const dl=document.getElementById('mSupplierList');if(dl)dl.innerHTML=suppliers.map(x=>`<option value="${esc(x.label)}"></option>`).join('')}
-function applyFilter(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const key=filter.value;document.querySelectorAll('#mList .material-list-item').forEach(row=>{if(!key){row.style.display='';return}const meta=norm(row.querySelector('.material-meta')?.innerText||'');row.style.display=meta.includes(key)?'':'none'})}
+function applyFilter(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const key=filter.value;document.querySelectorAll('#mList .material-list-item').forEach(row=>{if(!key){row.style.display='';return}const meta=norm(row.querySelector('.material-meta')?.innerText||'');const rowKey=supplierKey(row.querySelector('.material-meta')?.innerText||'');row.style.display=(rowKey.includes(key)||meta.includes(key))?'':'none'})}
 async function refreshInventory(){if(refreshing)return;refreshing=true;try{if(typeof loadAll==='function')await loadAll();await loadSuppliers();requestAnimationFrame(applyFilter)}catch(e){console.error('inventory live refresh',e)}finally{refreshing=false}}
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(refreshInventory,120)}
 function watchDelivery(){const results=document.getElementById('deliveryResults');if(!results){setTimeout(watchDelivery,250);return}if(results.dataset.liveRefreshWatch)return;results.dataset.liveRefreshWatch='1';let doneCount=results.querySelectorAll('.delivery-result.delivery-done').length;new MutationObserver(()=>{const next=results.querySelectorAll('.delivery-result.delivery-done').length;if(next>doneCount)scheduleRefresh();doneCount=next}).observe(results,{subtree:true,childList:true,attributes:true,attributeFilter:['class']})}

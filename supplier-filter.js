@@ -64,8 +64,9 @@ function applyFilter(){const filter=document.getElementById('mSupplierFilter');i
 async function refreshInventory(){if(refreshing)return;refreshing=true;try{if(typeof loadAll==='function')await loadAll();await loadSuppliers();requestAnimationFrame(applyFilter)}catch(e){console.error('inventory live refresh',e)}finally{refreshing=false}}
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(refreshInventory,120)}
 function watchDelivery(){const results=document.getElementById('deliveryResults');if(!results){setTimeout(watchDelivery,250);return}if(results.dataset.liveRefreshWatch)return;results.dataset.liveRefreshWatch='1';let doneCount=results.querySelectorAll('.delivery-result.delivery-done').length;new MutationObserver(()=>{const next=results.querySelectorAll('.delivery-result.delivery-done').length;if(next>doneCount)scheduleRefresh();doneCount=next}).observe(results,{subtree:true,childList:true,attributes:true,attributeFilter:['class']})}
+function loadNormalizer(){if(window.__deliveryNormalizerLoading)return;window.__deliveryNormalizerLoading=true;const s=document.createElement('script');s.src='./delivery-normalize.js?v=20260823-1';document.body.appendChild(s)}
 function hook(){
- installLargeFileUploadFix();installReviewJumpDelegation();watchReviewSummary();
+ installLargeFileUploadFix();installReviewJumpDelegation();watchReviewSummary();loadNormalizer();
  const filter=document.getElementById('mSupplierFilter');if(!filter){setTimeout(hook,200);return}
  if(!filter.dataset.directSupplierFix){filter.dataset.directSupplierFix='1';filter.addEventListener('change',applyFilter)}
  loadSuppliers();watchDelivery();

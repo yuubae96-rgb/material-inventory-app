@@ -19,6 +19,6 @@ function normalizeCard(card){if(card.dataset.m2Normalized==='1')return;const get
  card.dataset.m2Normalized='1';
 }
 function run(){document.querySelectorAll('#deliveryResults .delivery-result').forEach(normalizeCard);}
-function start(){run();const root=document.getElementById('deliveryResults')||document.getElementById('materialApp');if(root)new MutationObserver(()=>setTimeout(run,0)).observe(root,{childList:true,subtree:true});}
+function start(){run();const root=document.getElementById('deliveryResults')||document.getElementById('materialApp');if(root)new MutationObserver(()=>setTimeout(run,0)).observe(root,{childList:true,subtree:true});if(!window.__supplierReviewLoader){window.__supplierReviewLoader=true;const s=document.createElement('script');s.src='./supplier-duplicate-review.js?v=20260823-2140';document.body.appendChild(s)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

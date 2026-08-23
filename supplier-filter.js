@@ -8,13 +8,44 @@ const supplierKey=s=>{
  t=t.replace(/[（(]\s*(?:株|有)\s*[）)]/g,'');
  t=t.replace(/株式会社|有限会社|合同会社|合資会社|合名会社/g,'');
  t=t.replace(/[\s　・･.．,，、\-‐‑–—_]/g,'');
- // 本社・本店は同じ会社としてまとめる。支店・営業所は別拠点として残す。
  t=t.replace(/(?:本社|本店)$/,'');
- // 「株式会社 九州黄銅」「九州黄銅株式会社」「株式会社 九州黄銅社」のような表記ゆれを吸収。
  if(t.length>2)t=t.replace(/社$/,'');
  return t;
 };
-let suppliers=[],refreshing=false,refreshTimer=null;
+let suppliers=[],refreshing=false,refreshTimer=null,sanitizing=false;
+
+function sanitizeSupplierOptions(){
+ const filter=document.getElementById('mSupplierFilter');
+ if(!filter||sanitizing)return;
+ sanitizing=true;
+ try{
+  const current=filter.value;
+  const seen=new Set();
+  const keep=[];
+  for(const o of [...filter.options]){
+   if(!o.value){if(!seen.has('__all__')){seen.add('__all__');keep.push({value:'',text:'すべてのサプライヤー'})}continue}
+   const text=displayName(o.textContent||o.label||'');
+   const key=supplierKey(text)||norm(text)||String(o.value);
+   if(seen.has(key))continue;
+   seen.add(key);keep.push({value:key,text});
+  }
+  filter.innerHTML='';
+  for(const item of keep){const o=document.createElement('option');o.value=item.value;o.textContent=item.text;filter.appendChild(o)}
+  if([...filter.options].some(o=>o.value===current))filter.value=current;
+ }finally{sanitizing=false}
+}
+
+function installSupplierOptionGuard(){
+ const filter=document.getElementById('mSupplierFilter');
+ if(!filter)return false;
+ if(filter.dataset.hardDedupeGuard==='1')return true;
+ filter.dataset.hardDedupeGuard='1';
+ let timer=null;
+ new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(sanitizeSupplierOptions,0)}).observe(filter,{childList:true,subtree:false,characterData:false});
+ sanitizeSupplierOptions();
+ return true;
+}
+
 function installLargeFileUploadFix(){
  if(window.__deliveryLargeUploadFixed)return;window.__deliveryLargeUploadFixed=true;
  const originalFetch=window.fetch.bind(window),target='https://vnnvuxccazkdzwqjmntz.supabase.co/functions/v1/delivery-note-ai',signer='https://vnnvuxccazkdzwqjmntz.supabase.co/functions/v1/delivery-upload-url';
@@ -47,15 +78,28 @@ async function loadSuppliers(){
   for(const row of data||[]){
    const raw=displayName(row.supplier);if(!raw)continue;
    const key=supplierKey(raw)||norm(raw);if(!key)continue;
-   if(!groups.has(key))groups.set(key,{key,label:raw,count:0,aliases:new Set()});
-   const g=groups.get(key);g.count++;g.aliases.add(norm(raw));
+   if(!groups.has(key))groups.set(key,{key,label:raw,count:0});
+   const g=groups.get(key);g.count++;
    if(raw.length<g.label.length)g.label=raw;
   }
   suppliers=[...groups.values()].sort((a,b)=>a.label.localeCompare(b.label,'ja'));
   renderChoices();
  }catch(e){console.error('supplier filter load',e)}
 }
-function renderChoices(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const current=filter.value;filter.innerHTML='<option value="">すべてのサプライヤー</option>'+suppliers.map(x=>`<option value="${esc(x.key)}">${esc(x.label)}</option>`).join('');if(suppliers.some(x=>x.key===current))filter.value=current;const dl=document.getElementById('mSupplierList');if(dl)dl.innerHTML=suppliers.map(x=>`<option value="${esc(x.label)}"></option>`).join('')}
+function renderChoices(){
+ const filter=document.getElementById('mSupplierFilter');if(!filter)return;
+ const current=filter.value;
+ filter.innerHTML='';
+ const all=document.createElement('option');all.value='';all.textContent='すべてのサプライヤー';filter.appendChild(all);
+ const used=new Set();
+ for(const x of suppliers){
+  const key=supplierKey(x.label)||x.key;if(!key||used.has(key))continue;used.add(key);
+  const o=document.createElement('option');o.value=key;o.textContent=x.label;filter.appendChild(o);
+ }
+ sanitizeSupplierOptions();
+ if([...filter.options].some(o=>o.value===current))filter.value=current;
+ const dl=document.getElementById('mSupplierList');if(dl){dl.innerHTML='';const seen=new Set();for(const x of suppliers){const key=supplierKey(x.label)||x.key;if(!key||seen.has(key))continue;seen.add(key);const o=document.createElement('option');o.value=x.label;dl.appendChild(o)}}
+}
 function applyFilter(){const filter=document.getElementById('mSupplierFilter');if(!filter)return;const key=filter.value;document.querySelectorAll('#mList .material-list-item').forEach(row=>{if(!key){row.style.display='';return}const meta=norm(row.querySelector('.material-meta')?.innerText||'');const rowKey=supplierKey(row.querySelector('.material-meta')?.innerText||'');row.style.display=(rowKey.includes(key)||meta.includes(key))?'':'none'})}
 async function refreshInventory(){if(refreshing)return;refreshing=true;try{if(typeof loadAll==='function')await loadAll();await loadSuppliers();requestAnimationFrame(applyFilter)}catch(e){console.error('inventory live refresh',e)}finally{refreshing=false}}
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(refreshInventory,120)}
@@ -66,6 +110,7 @@ function hook(){
  loadScriptOnce('./delivery-normalize.js?v=20260823-2','__deliveryNormalizerLoading');
  loadScriptOnce('./inventory-m2-display.js?v=20260823-1','__inventoryM2DisplayLoading');
  const filter=document.getElementById('mSupplierFilter');if(!filter){setTimeout(hook,200);return}
+ installSupplierOptionGuard();
  if(!filter.dataset.directSupplierFix){filter.dataset.directSupplierFix='1';filter.addEventListener('change',applyFilter)}
  loadSuppliers();watchDelivery();
  const list=document.getElementById('mList');if(list&&!list.dataset.supplierFilterLight){list.dataset.supplierFilterLight='1';let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(applyFilter,30)}).observe(list,{childList:true})}

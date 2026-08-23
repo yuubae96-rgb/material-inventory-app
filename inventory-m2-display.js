@@ -3,7 +3,7 @@
 const DENSITY={aluminum:2.70,stainless:7.93,steel:7.85,brass:8.50,copper:8.96};
 const fmt=x=>Number(x).toLocaleString('ja-JP',{maximumFractionDigits:4});
 const fmtYen=x=>Math.round(Number(x)).toLocaleString('ja-JP');
-function fixDateText(s){return String(s||'').replace(/\b20(0[1-9]|1\d)-(\d{2})-(\d{2})\b/g,(_,yy,mm,dd)=>`${2018+Number(yy)}-${mm}-${dd}`)}
+function fixDateText(s){return String(s||'').replace(/\b2062-(\d{2})-(\d{2})\b/g,'2026-$1-$2').replace(/\b20(0[1-9]|1\d)-(\d{2})-(\d{2})\b/g,(_,yy,mm,dd)=>`${2018+Number(yy)}-${mm}-${dd}`)}
 function densityFor(t){t=String(t||'').normalize('NFKC').toLowerCase();if(/a1\d{3}|a1050|a1070|アルミ/.test(t))return DENSITY.aluminum;if(/sus|304|316|430|ステンレス/.test(t))return DENSITY.stainless;if(/真鍮|黄銅|brass|c2[678]\d{2}/.test(t))return DENSITY.brass;if(/銅|copper|c1100/.test(t))return DENSITY.copper;if(/鉄|steel|spcc|ss400/.test(t))return DENSITY.steel;return null}
 function dims(t){t=String(t||'').normalize('NFKC');let m=t.match(/(?:^|[^\d.])(\d+(?:\.\d+)?)\s*[x×X]\s*(\d+(?:\.\d+)?)\s*[x×X]\s*(\d+(?:\.\d+)?)(?:[^\d.]|$)/);if(m)return{th:+m[1],w:+m[2],l:+m[3]};m=t.match(/t\s*(\d+(?:\.\d+)?)/i);let th=m?+m[1]:null;if(!th){const tm=t.match(/(?:^|[\s/])(?:板厚)?\s*(\d+(?:\.\d+)?)\s*[x×X]\s*(\d{3,4}(?:\.\d+)?)\s*[x×X]\s*(\d{3,4}(?:\.\d+)?)/i);if(tm)th=+tm[1]}const pairs=[...t.matchAll(/(\d+(?:\.\d+)?)\s*[x×X]\s*(\d+(?:\.\d+)?)/g)].map(x=>({w:+x[1],l:+x[2]})).filter(x=>x.w>=100&&x.l>=100);const a=pairs[pairs.length-1];return a?{th,w:a.w,l:a.l}:{th}}
 function isPlate(text){return /板材|金属板|鋼板|黄銅板|銅板|板|sheet|a1\d{3}|sus|304|316|430|ステンレス|アルミ|真鍮|黄銅|c2801/.test(String(text||'').toLowerCase())}

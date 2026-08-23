@@ -8,8 +8,9 @@ const supplierKey=s=>{
  t=t.replace(/[（(]\s*(?:株|有)\s*[）)]/g,'');
  t=t.replace(/株式会社|有限会社|合同会社|合資会社|合名会社/g,'');
  t=t.replace(/[\s　・･.．,，、\-‐‑–—_]/g,'');
- // 「株式会社 九州黄銅」「九州黄銅株式会社」「株式会社 九州黄銅社」のような
- // 明らかな表記ゆれを同一サプライヤーとして扱う。
+ // 本社・本店は同じ会社としてまとめる。支店・営業所は別拠点として残す。
+ t=t.replace(/(?:本社|本店)$/,'');
+ // 「株式会社 九州黄銅」「九州黄銅株式会社」「株式会社 九州黄銅社」のような表記ゆれを吸収。
  if(t.length>2)t=t.replace(/社$/,'');
  return t;
 };
@@ -48,7 +49,6 @@ async function loadSuppliers(){
    const key=supplierKey(raw)||norm(raw);if(!key)continue;
    if(!groups.has(key))groups.set(key,{key,label:raw,count:0,aliases:new Set()});
    const g=groups.get(key);g.count++;g.aliases.add(norm(raw));
-   // 同一会社なら、支店名などを勝手に消さず、そのグループ内で最も短い表記を代表名にする。
    if(raw.length<g.label.length)g.label=raw;
   }
   suppliers=[...groups.values()].sort((a,b)=>a.label.localeCompare(b.label,'ja'));

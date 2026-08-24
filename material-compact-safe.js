@@ -11,7 +11,7 @@ function ensureKyushuKodoM2(){
   if(window.__kyushuKodoM2LoaderStarted||window.kyushuKodoM2)return;
   window.__kyushuKodoM2LoaderStarted=true;
   const s=document.createElement('script');
-  s.src='./kyushu-kodo-m2.js?v=20260825-0730';
+  s.src='./kyushu-kodo-m2.js?v=20260825-0821';
   s.async=false;
   s.onerror=()=>{window.__kyushuKodoM2LoaderStarted=false;console.error('kyushu-kodo-m2.js load failed')};
   document.body.appendChild(s);

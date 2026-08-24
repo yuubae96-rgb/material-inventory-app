@@ -39,11 +39,13 @@ async function showCalculations(){
     const md=materialDensity(m);if(!md)continue;
     const {data:ps}=await supabaseClient.from('material_prices').select('*').eq('material_id',m.id).order('effective_from',{ascending:false}).order('id',{ascending:false}).limit(1);
     const p=ps?.[0],kg=originalKgPrice(p);if(!p||!kg)continue;
-    const raw=kg*Number(m.thickness_mm)*md.density,rounded=Math.round(raw);
+    const thickness=Number(m.thickness_mm);
+    const kgPerM2=thickness*md.density;
+    const raw=kg*kgPerM2,rounded=Math.round(raw);
     document.querySelectorAll(`#mList .material-list-item[data-material-id="${m.id}"]`).forEach(row=>{
       let n=row.querySelector('.kyushu-kodo-calc');
       if(!n){n=document.createElement('div');n.className='kyushu-kodo-calc';const price=row.querySelector('.material-price');(price?.parentNode||row).insertBefore(n,price?.nextSibling||null)}
-      n.innerHTML=`<div style="margin-top:8px;padding:9px 10px;border-radius:9px;background:#f4f7fb;font-size:12px;line-height:1.65;font-weight:700"><b>㎡単価の計算</b><br>${md.label} 比重 ${fmt(md.density)}<br>${fmt(kg)}円/kg × ${fmt(m.thickness_mm)}mm × ${fmt(md.density)} ＝ ${fmt(raw)}円/㎡<br>→ 小数点以下四捨五入 ＝ <b>${fmt(rounded)}円/㎡</b></div>`;
+      n.innerHTML=`<div style="margin-top:8px;padding:9px 10px;border-radius:9px;background:#f4f7fb;font-size:12px;line-height:1.65;font-weight:700"><b>㎡単価の計算</b><br>材質：${md.label}　比重：${fmt(md.density)}<br>① 1㎡の重量：${fmt(thickness)}mm × ${fmt(md.density)} ＝ <b>${fmt(kgPerM2)}kg/㎡</b><br>② ㎡単価：${fmt(kg)}円/kg × ${fmt(kgPerM2)}kg/㎡ ＝ ${fmt(raw)}円/㎡<br>③ 小数点以下四捨五入 → <b>${fmt(rounded)}円/㎡</b></div>`;
     });
   }
 }
@@ -59,13 +61,14 @@ async function normalize(){
     const basis=norm(p.price_basis),unit=norm(m.stock_unit);
     if(!(unit==='k'||unit==='kg'||basis==='kg'))continue;
     const original=Number(p.price);if(!Number.isFinite(original)||original<=0)continue;
-    const raw=original*Number(m.thickness_mm)*md.density,m2=Math.round(raw),areaPerKg=1/(Number(m.thickness_mm)*md.density);
+    const thickness=Number(m.thickness_mm),kgPerM2=thickness*md.density;
+    const raw=original*kgPerM2,m2=Math.round(raw),areaPerKg=1/kgPerM2;
     await supabaseClient.from('materials').update({stock_unit:'㎡'}).eq('id',m.id);
-    await supabaseClient.from('material_prices').update({price:m2,price_basis:'stock_unit',notes:`${p.notes||''} / 九州黄銅 K=kg → ㎡換算（${md.label} 比重 ${md.density}、元単価 ${original}円/kg）`.trim()}).eq('id',p.id);
+    await supabaseClient.from('material_prices').update({price:m2,price_basis:'stock_unit',notes:`${p.notes||''} / 九州黄銅 K=kg → ㎡換算（${md.label} 比重 ${md.density}、${thickness}mm × ${md.density} = ${kgPerM2}kg/㎡、元単価 ${original}円/kg、㎡単価 ${raw}円/㎡ → ${m2}円/㎡）`.trim()}).eq('id',p.id);
     const {data:moves}=await supabaseClient.from('inventory_movements').select('*').eq('material_id',m.id);
     for(const mv of moves||[]){
       if(Number(mv.unit_price)===original){
-        await supabaseClient.from('inventory_movements').update({quantity:Number((Number(mv.quantity)*areaPerKg).toFixed(4)),unit_price:m2,memo:`${mv.memo||''} / 九州黄銅 K=kg → ㎡換算（${md.label} 比重 ${md.density}）`.trim()}).eq('id',mv.id);
+        await supabaseClient.from('inventory_movements').update({quantity:Number((Number(mv.quantity)*areaPerKg).toFixed(4)),unit_price:m2,memo:`${mv.memo||''} / 九州黄銅 K=kg → ㎡換算（${md.label} 比重 ${md.density}、${kgPerM2}kg/㎡）`.trim()}).eq('id',mv.id);
       }
     }
   }

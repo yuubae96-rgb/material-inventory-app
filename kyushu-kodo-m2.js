@@ -5,6 +5,7 @@ const DENSITIES={
   iron:7.85,
   stainless304:7.93,
   stainless316:7.98,
+  stainless430:7.70,
   brass:8.50,
   copper:8.96
 };
@@ -13,10 +14,11 @@ function textOf(m){return norm(`${m?.category||''} ${m?.name||''} ${m?.spec||''}
 function isKyushuKodo(m){return norm(m?.supplier).includes('九州黄銅')}
 function materialDensity(m){
   const t=textOf(m);
-  if(/a1050|a1100|a5052|a6061|アルミ/.test(t))return {density:DENSITIES.aluminum,label:'アルミ'};
-  if(/sus316|sus316l/.test(t))return {density:DENSITIES.stainless316,label:'SUS316'};
-  if(/sus304|ステンレス/.test(t))return {density:DENSITIES.stainless304,label:'SUS304'};
-  if(/真鍮|brass|c2600|c2680|c2801/.test(t))return {density:DENSITIES.brass,label:'真鍮'};
+  if(/a1050|a1070|a1100|a5052|a6061|アルミ/.test(t))return {density:DENSITIES.aluminum,label:'アルミ'};
+  if(/sus316l?|316l?/.test(t))return {density:DENSITIES.stainless316,label:'SUS316'};
+  if(/sus430|430/.test(t))return {density:DENSITIES.stainless430,label:'SUS430'};
+  if(/sus304|304|ステンレス|sus/.test(t))return {density:DENSITIES.stainless304,label:'SUS304'};
+  if(/\bbsp\b|bsp|真鍮|黄銅|brass|c2600|c2680|c2801/.test(t))return {density:DENSITIES.brass,label:'真鍮'};
   if(/銅|copper|c1100|c1020|c1220/.test(t))return {density:DENSITIES.copper,label:'銅'};
   if(/鉄|steel|spcc|ss400/.test(t))return {density:DENSITIES.iron,label:'鉄'};
   return null;
@@ -43,6 +45,7 @@ async function showCalculations(){
     const kgPerM2=thickness*md.density;
     const raw=kg*kgPerM2,rounded=Math.round(raw);
     document.querySelectorAll(`#mList .material-list-item[data-material-id="${m.id}"]`).forEach(row=>{
+      row.querySelectorAll('.m2-display-note').forEach(x=>x.remove());
       let n=row.querySelector('.kyushu-kodo-calc');
       if(!n){n=document.createElement('div');n.className='kyushu-kodo-calc';const price=row.querySelector('.material-price');(price?.parentNode||row).insertBefore(n,price?.nextSibling||null)}
       n.innerHTML=`<div style="margin-top:8px;padding:9px 10px;border-radius:9px;background:#f4f7fb;font-size:12px;line-height:1.65;font-weight:700"><b>㎡単価の計算</b><br>材質：${md.label}　比重：${fmt(md.density)}<br>① 1㎡の重量：${fmt(thickness)}mm × ${fmt(md.density)} ＝ <b>${fmt(kgPerM2)}kg/㎡</b><br>② ㎡単価：${fmt(kg)}円/kg × ${fmt(kgPerM2)}kg/㎡ ＝ ${fmt(raw)}円/㎡<br>③ 小数点以下四捨五入 → <b>${fmt(rounded)}円/㎡</b></div>`;

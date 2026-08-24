@@ -31,7 +31,18 @@
         const sm=stock.textContent.replace(/,/g,'').match(/(-?\d+(?:\.\d+)?)/);
         if(sm){let n=Number(sm[1]);if(!isLabel&&/枚/.test(stock.textContent)&&areaPerUnit)n*=areaPerUnit;setTextIfChanged(stock,(Math.round(n*1000)/1000).toLocaleString('ja-JP')+' ㎡')}
       }
-      if(price){const next=price.textContent.replace(/\/\s*(枚|巻|単位不明|個|kg)(?=\s|$)/,'/ ㎡');setTextIfChanged(price,next)}
+      /*
+       * IMPORTANT:
+       * Do not merely relabel a sheet/roll/kg price as 円/㎡ here.
+       * inventory-m2-display.js performs the actual numeric conversion.
+       * The old code changed only "/枚" to "/㎡" without dividing by the
+       * sheet area. Depending on script timing, that made 9,530円/枚 appear
+       * incorrectly as 9,530円/㎡ and prevented the real converter from running.
+       */
+      if(price){
+        const current=price.textContent||'';
+        if(/\/\s*㎡|\/\s*m²/i.test(current)) setTextIfChanged(price,current);
+      }
       if(meta){
         let note=meta.querySelector('.area-standard-note');
         if(!note){note=document.createElement('div');note.className='area-standard-note';note.style.cssText='margin-top:4px;font-weight:800;color:#287a3d;opacity:1';meta.appendChild(note)}

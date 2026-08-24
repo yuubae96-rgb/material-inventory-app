@@ -43,7 +43,7 @@ async function normalize(){
   const {data:ms,error}=await supabaseClient.from('materials').select('*').eq('active',true);if(error)return console.error(error);
   for(const m of ms||[]){
     if(!isKyushuKodo(m)||!m.thickness_mm)continue;
-    /* 重要：原本の在庫単位が K/kg の材料だけを比重換算する。price_basis が kg でも S/枚を上書きしない。 */
+    /* 原本の在庫単位が K/kg の材料だけを比重換算する。S/枚は絶対にkg扱いしない。 */
     if(unitOf(m)!=='kg')continue;
     const md=materialDensity(m);if(!md)continue;
     const {data:ps,error:pe}=await supabaseClient.from('material_prices').select('*').eq('material_id',m.id).order('effective_from',{ascending:false}).order('id',{ascending:false}).limit(1);
@@ -57,7 +57,8 @@ async function normalize(){
   }
   document.dispatchEvent(new CustomEvent('kyushu-kodo-m2-normalized'));setTimeout(showCalculations,300);
 }
-function run(){normalize();setTimeout(showCalculations,900);setTimeout(showCalculations,1800)}
+function loadComparison(){if(window.__metalPriceComparisonLoading)return;window.__metalPriceComparisonLoading=true;const s=document.createElement('script');s.src='./metal-price-comparison.js?v=20260825-0818';s.onerror=()=>{window.__metalPriceComparisonLoading=false};document.body.appendChild(s)}
+function run(){normalize();loadComparison();setTimeout(showCalculations,900);setTimeout(showCalculations,1800)}
 window.kyushuKodoM2={DENSITIES,materialDensity,roundM2Price,showCalculations};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 document.addEventListener('click',e=>{if(e.target.closest?.('.material-compact-summary'))setTimeout(showCalculations,50)},true);

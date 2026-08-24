@@ -1,0 +1,19 @@
+(()=>{
+'use strict';
+if(window.__materialSourceLinkInstalled)return;window.__materialSourceLinkInstalled=true;
+const FN='https://vnnvuxccazkdzwqjmntz.supabase.co/functions/v1/delivery-note-archive';
+const sourceByMaterial=new Map();
+let loading=false,attachTimer=null;
+async function post(body){const r=await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||`HTTP ${r.status}`);return j}
+async function loadSources(){if(loading||!window.supabaseClient)return;loading=true;try{const {data,error}=await window.supabaseClient.from('material_prices').select('id,material_id,effective_from,source_file_path,source_file_name,source_page,source_item_index').not('source_file_path','is',null).order('effective_from',{ascending:false}).order('id',{ascending:false});if(error)throw error;sourceByMaterial.clear();for(const x of data||[]){const k=String(x.material_id);if(!sourceByMaterial.has(k))sourceByMaterial.set(k,x)}}catch(e){console.warn('material source link load failed',e)}finally{loading=false}}
+function findRowId(row){return String(row.dataset.materialId||row.querySelector('.material-edit-btn')?.dataset.id||'')}
+function ensureActions(row){let edit=row.querySelector('.material-edit-btn');if(!edit)return null;let wrap=edit.closest('.material-source-actions');if(!wrap){wrap=document.createElement('div');wrap.className='material-source-actions';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px';edit.parentNode.insertBefore(wrap,edit);wrap.appendChild(edit);edit.style.marginTop='0'}return wrap}
+function attachRow(row){const id=findRowId(row),s=sourceByMaterial.get(id),existing=row.querySelector('.material-source-btn');if(!s){existing?.remove();return}const wrap=ensureActions(row);if(!wrap)return;let b=existing;if(!b){b=document.createElement('button');b.type='button';b.className='material-source-btn';b.style.cssText='display:inline-flex;align-items:center;justify-content:center;border:2px solid #dc2626;background:#fff;color:#b91c1c;border-radius:10px;padding:8px 14px;font-weight:900;font-size:14px;min-width:96px;touch-action:manipulation';wrap.appendChild(b)}b.dataset.path=s.source_file_path||'';b.dataset.page=s.source_page||'';b.dataset.file=s.source_file_name||'';b.textContent=s.source_page?`原本を見る ${s.source_page}p`:'原本を見る';b.title=s.source_page?`${s.source_file_name||'納品書'} の ${s.source_page}ページ目`:(s.source_file_name||'元の納品書PDF');}
+function attachAll(){document.querySelectorAll('#mList .material-list-item').forEach(attachRow)}
+function scheduleAttach(){clearTimeout(attachTimer);attachTimer=setTimeout(attachAll,30)}
+async function openSource(b){const path=b.dataset.path;if(!path)return;const old=b.textContent;b.disabled=true;b.textContent='開いています…';try{const j=await post({action:'url',path});let url=j.url;const p=Number(b.dataset.page);if(p>0)url+=`${url.includes('#')?'&':'#'}page=${p}`;window.open(url,'_blank','noopener')}catch(e){alert('原本を開けませんでした：'+e.message)}finally{b.disabled=false;b.textContent=old}}
+function installClick(){document.addEventListener('click',e=>{const b=e.target.closest?.('.material-source-btn');if(!b)return;e.preventDefault();e.stopPropagation();openSource(b)},true)}
+async function refresh(){await loadSources();attachAll()}
+async function start(){installClick();await refresh();const root=document.getElementById('mList');if(root)new MutationObserver(scheduleAttach).observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['data-material-id']});window.addEventListener('delivery-archive-reanalyzed',()=>setTimeout(refresh,200));[300,800,1500,2500].forEach(t=>setTimeout(attachAll,t))}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
